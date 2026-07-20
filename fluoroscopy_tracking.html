@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<title>Vision Models for Guidewire Tracking in Fluoroscopy | Phurin Rintanalert</title>
+	<meta name="description" content="MSc thesis case study: a systematic comparison of ten architectures — including DINOv3 foundation-model features, LSTM temporal memory, and graph priors — for markerless guidewire tracking in simulated fluoroscopy.">
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:ital,wght@1,500&display=swap" rel="stylesheet">
+	<link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+
+	<main class="case-study wrap">
+		<a class="back" href="index.html#work">&#8592; Back to portfolio</a>
+
+		<h1>Vision Models for Guidewire Tracking in Fluoroscopy</h1>
+		<p class="meta">2026 &middot; MSc Thesis &middot; DINOv3 &middot; PyTorch &middot; stEVE Simulation</p>
+
+		<figure>
+			<img src="images/articles/fluoro_comparison.png" alt="Predicted vs. ground-truth guidewire traces for ten tracking models on a simulated fluoroscopy frame" />
+			<figcaption>Predicted (coloured) vs. ground-truth guidewire nodes across the ten architectures on a held-out test frame.</figcaption>
+		</figure>
+
+		<h2>The problem</h2>
+		<p>Autonomous and semi-autonomous endovascular navigation needs a reliable perception layer: the system must know exactly where the guidewire is, in every frame, without radio-opaque markers. This project is the vision component of a larger <strong>world model</strong> for that task &mdash; and asks a focused question: what actually drives tracking accuracy? Learned spatial features, self-supervised foundation-model representations, temporal memory, or an explicit kinematic-chain prior?</p>
+
+		<h2>Setup</h2>
+		<p>I generated 10,000 simulated fluoroscopy frames (96&times;96&nbsp;px) in the physics-based <strong>stEVE</strong> endovascular simulator, each episode a distinct, randomly generated aortic-arch anatomy. Using a verified chronological split &mdash; 8,000 training frames against 2,000 held-out test frames with no episode boundary crossed &mdash; each model regresses the 10 guidewire nodes (tip to base) per frame. All temporal models use a causal 3-frame window consistent with live deployment.</p>
+
+		<h2>The ten architectures</h2>
+		<p>I compared raw-pixel baselines (CNN, LSTM, GCN) against DINOv3-backed pipelines: a zero-shot linear probe, a DINOv3+CNN adapter, and that adapter augmented with temporal (LSTM) or graph (GCN) heads &mdash; each also in a domain-randomised training variant. This isolates the individual contribution of every component on an otherwise identical trunk.</p>
+
+		<h2>Key results</h2>
+		<p>Feature representation, not temporal or graph modelling, was the dominant determinant of accuracy. Errors are in simulator world units (field of view 158.85 &times; 309.81 units):</p>
+		<ul>
+			<li><strong>DINOv3+CNN reached 4.92 units whole-wire error</strong> &mdash; a 1.8&times; improvement over the best raw-pixel model (CNN, 8.62) and 2.2&times; over the DINOv3 zero-shot probe (10.96).</li>
+			<li><strong>Best overall: DINOv3+CNN+GCN (augmented) at 4.65 units</strong> (tip error 8.99), localising the wire to within ~3.1% / 2.1% of the field of view per axis.</li>
+			<li><strong>Raw-pixel LSTM and GCN collapsed</strong> to a constant, input-independent output (~30.9 units, exactly zero frame-to-frame movement) &mdash; without strong spatial features, they failed to learn image-conditioned tracking at all.</li>
+			<li>A Friedman omnibus test confirmed the pipelines are not interchangeable (&chi;&sup2;(9)=65.67, p=1.07&times;10&#8315;&sup1;&#8304;).</li>
+		</ul>
+
+		<h2>Robustness: where temporal memory earns its place</h2>
+		<p>On clean sequences, adding an LSTM to strong features barely changed accuracy. Its value showed up under stress. In a sabotage benchmark injecting one heavily corrupted frame per episode, the temporal model&rsquo;s error barely moved (&minus;0.14 units) while the memoryless CNN&rsquo;s error more than tripled (+11.48 units). This difference was statistically significant with the maximum possible effect size (Wilcoxon, Holm-corrected p=0.0039, r=&minus;1.00, all 10 episodes agreeing) &mdash; a bounded worst case at no cost to clean-sequence accuracy, which is arguably the more clinically relevant safety property for autonomous navigation.</p>
+
+		<figure>
+			<img src="images/articles/fluoro_sabotage.png" alt="Tracking error of temporal, spatial, and graph models at a corrupted fluoroscopy frame" loading="lazy" />
+			<figcaption>Under an acutely corrupted frame, the temporal model (left) holds its baseline while the memoryless models spike.</figcaption>
+		</figure>
+
+		<h2>Takeaways</h2>
+		<p>Fine-tuned self-supervised foundation-model features are the decisive ingredient for guidewire tracking, delivering sub-2%-of-FOV accuracy without temporal or graph information. Temporal architecture, meanwhile, should be evaluated on robustness rather than clean-sequence accuracy. As with all single-simulator, single-seed studies, these findings would need replication across additional anatomies and training seeds before generalising &mdash; a limitation I document explicitly in the thesis.</p>
+
+	</main>
+
+	<footer>
+		<div class="wrap inner">
+			<p class="copyright"><a href="index.html#work">&#8592; Back to portfolio</a></p>
+			<p class="copyright">&copy; Phurin Rintanalert 2026</p>
+		</div>
+	</footer>
+
+</body>
+</html>

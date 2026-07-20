@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<title>Denoising Photoacoustic Imaging Data | Phurin Rintanalert</title>
+	<meta name="description" content="Case study: a fair comparison of spatial, temporal, and spatiotemporal denoising strategies for photoacoustic RF data — uncovering a data-leakage flaw and introducing suppression-aware evaluation metrics.">
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:ital,wght@1,500&display=swap" rel="stylesheet">
+	<link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+
+	<main class="case-study wrap">
+		<a class="back" href="index.html#work">&#8592; Back to portfolio</a>
+
+		<h1>Denoising Photoacoustic Imaging Data</h1>
+		<p class="meta">2026 &middot; MATLAB &middot; Python &middot; Signal Processing &middot; Photoacoustic Imaging</p>
+
+		<figure>
+			<img src="images/articles/pam_spatiotemporal.png" alt="Reconstructed photoacoustic images comparing spatiotemporal denoising algorithms" />
+			<figcaption>Reconstructed photoacoustic images from the spatiotemporal denoising strategies compared in this study.</figcaption>
+		</figure>
+
+		<h2>The problem</h2>
+		<p>Photoacoustic images reconstructed from single-shot RF acquisitions are dominated by speckle and static acoustic clutter, which motivates a large space of denoising algorithms &mdash; from classical single-frame filters to spatiotemporal decompositions that exploit redundancy across hundreds of frames. But comparing them fairly is deceptively hard: algorithms with access to very different amounts of information aren&rsquo;t directly comparable, and a scalar metric like SSIM can be inflated by degenerate behaviour, such as simply suppressing the whole image.</p>
+
+		<h2>What I did</h2>
+		<p>Working with real data from an AcousticX system (a human-finger acquisition, 128 channels &times; ~1,500 frames), I reconstructed images via delay-and-sum back-projection and benchmarked a wide sweep of denoisers: wavelet thresholding, several Variational Mode Decomposition variants, spatiotemporal SVD (ST-SVD), a SVD+IVMD hybrid, Robust PCA, and a family of Kalman filters.</p>
+
+		<h2>The core finding: fixing a flawed evaluation</h2>
+		<p>The most important result was methodological. An earlier version of the pipeline was confounded by <strong>data leakage</strong>: the pseudo-ground-truth reference and the spatiotemporal algorithms&rsquo; input window shared frames, which artificially inflated a zero-processing temporal average to an SSIM of 0.912 &mdash; higher than any real algorithm. I diagnosed this, rebuilt the evaluation with fully disjoint frame blocks (which corrected that SSIM to a plausible 0.819), and introduced two <strong>baseline-relative metrics</strong>:</p>
+		<ul>
+			<li><strong>Signal Preservation Index (SPI)</strong> &mdash; how much genuine signal survives denoising.</li>
+			<li><strong>Background Energy Ratio (BER)</strong> &mdash; how much background energy is retained.</li>
+		</ul>
+		<p>Together with a &ldquo;flagged fraction&rdquo; detector, these expose algorithms that win on SSIM purely by suppressing image energy rather than by preserving structure.</p>
+
+		<h2>Results</h2>
+		<p>Once suppression artifacts are accounted for, <strong>ST-SVD is the strongest defensible algorithm</strong>: it preserves substantially more real signal (SPI 0.607) than the more complex SVD+IVMD hybrid (SPI ~0.39) despite statistically indistinguishable SSIM &mdash; showing the hybrid&rsquo;s extra post-processing removes signal without a structural benefit. Several superficially &ldquo;high-SSIM&rdquo; methods (wavelet, the hybrids, an adaptive-threshold ST-SVD reaching the study&rsquo;s highest raw SSIM of 0.846) were flagged as inflating SSIM through suppression. The Kalman family degraded the signal at every iteration and was excluded, and Robust PCA was shown to be a structural mismatch for this data &mdash; both reported transparently as negative results.</p>
+
+		<figure>
+			<img src="images/articles/pam_singleframe.png" alt="Reconstructed photoacoustic images comparing single-frame denoising filters" loading="lazy" />
+			<figcaption>Single-frame filters compared against the unfiltered baseline reconstruction.</figcaption>
+		</figure>
+
+		<h2>Takeaway</h2>
+		<p>This project is as much a case study in evaluation methodology as an algorithm comparison. The headline lesson &mdash; that the &ldquo;best&rdquo; algorithm depended entirely on catching a data-leakage confound and measuring signal preservation, not just image similarity &mdash; is exactly the kind of rigour that separates a model that looks good on a metric from one that is genuinely clinically useful.</p>
+
+	</main>
+
+	<footer>
+		<div class="wrap inner">
+			<p class="copyright"><a href="index.html#work">&#8592; Back to portfolio</a></p>
+			<p class="copyright">&copy; Phurin Rintanalert 2026</p>
+		</div>
+	</footer>
+
+</body>
+</html>
