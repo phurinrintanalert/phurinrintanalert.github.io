@@ -48,8 +48,8 @@
 		<section id="about" class="wrap about">
 			<h2 class="section-label">About</h2>
 			<p>I spent two years as a doctor in the NHS. On the wards, I saw firsthand how systemic bottlenecks and diagnostic delays cost both time and lives — and how often the missing piece wasn&rsquo;t medical knowledge, but better tools.</p>
-			<p>So I learned to build them. I completed an MSc in Healthcare Technologies at King&rsquo;s College London with Distinction, working on computer vision, generative models and uncertainty in medical imaging; my thesis on guidewire tracking for autonomous endovascular navigation is under review at IPCAI.</p>
-			<p>Building models taught me that the harder question is often the next one: how do we know a system is good enough to rely on? Much of my work now sits there. As an Applied Science Intern at Frontier Health, I evaluate LLM agents used in NHS hospital operations, and across my projects I try to report what failed as carefully as what worked. You can find my past projects on <a href="https://github.com/phurinrintanalert" target="_blank" rel="noopener">GitHub</a>.</p>
+			<p>So I learned to build them. I completed an MSc in Healthcare Technologies at King&rsquo;s College London with Distinction, working on computer vision, generative models and uncertainty in medical imaging; my thesis on guidewire tracking for autonomous endovascular navigation is currently under peer review.</p>
+			<p>Building models taught me that the harder question is often the next one: how do we know a system is good enough to rely on? Much of my work now sits there. As an Applied Science Intern at Frontier Health, I evaluate LLM agents used in NHS hospital operations. You can find my past projects on <a href="https://github.com/phurinrintanalert" target="_blank" rel="noopener">GitHub</a>.</p>
 		</section>
 
 		<section id="work" class="wrap-wide">
@@ -59,13 +59,10 @@
 				<img src="images/thumbs/fluoro.png" alt="Guidewire tracking predictions overlaid on simulated fluoroscopy frames" loading="lazy" />
 				<div>
 					<h3>Vision Models for Guidewire Tracking in Fluoroscopy <span class="year">2026 &middot; MSc Thesis</span></h3>
-					<p>The perception component of a world model for autonomous endovascular navigation. I systematically benchmarked ten architectures for markerless guidewire tracking on 10,000 simulated fluoroscopy frames, and found that self-supervised foundation-model features (DINOv3) dominate — a DINOv3+CNN adapter cut tracking error 1.8&times; over a raw-pixel CNN, while temporal memory significantly bounded worst-case error under acute image corruption.</p>
+					<p>A marker-free perception pipeline towards robot-assisted endovascular navigation: localising a guidewire in fluoroscopy and predicting its next movement, evaluated in simulation and on real X-ray images. The work is currently under peer review; details will be added after the decision.</p>
 					<ul class="tags">
 						<li>DINOv3</li><li>PyTorch</li><li>GCN / LSTM</li><li>stEVE Simulation</li><li>Statistical Analysis</li>
 					</ul>
-					<div class="project-links">
-						<a href="fluoroscopy_tracking.html">Read the case study&nbsp;&#8594;</a>
-					</div>
 				</div>
 			</article>
 
