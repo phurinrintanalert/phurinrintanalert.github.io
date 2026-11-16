@@ -23,19 +23,19 @@
 		</figure>
 
 		<h2>Overview</h2>
-		<p>I engineered an end-to-end 3D imaging pipeline to segment the spleen from highly variable CT scans. To scientifically validate the architecture, I developed and benchmarked five distinct models against a baseline standard U-Net.</p>
-
-		<h2>Clinical significance</h2>
-		<p>In clinical practice, a model that simply outputs a prediction is insufficient; clinicians need to know <em>when</em> the model is unsure. By building a dual-head Bayesian neural network into this pipeline, the model generates diagnostic heatmaps that isolate epistemic uncertainty (model ignorance) from aleatoric uncertainty (CT acquisition artifacts).</p>
-
-		<h2>Model benchmarking</h2>
+		<p>I built an end-to-end 3D pipeline to segment the spleen from CT scans (Medical Segmentation Decathlon) and compared a series of model variants, changing one component at a time so that each improvement could be attributed. I also attempted two extensions: semi-supervised augmentation consistency and a Bayesian network for uncertainty estimation. Both failed, and the reasons why are reported below. Finally, I combined my best model with two groupmates&rsquo; independently trained models into an ensemble evaluated on held-out test volumes.</p>
+		
+		<h2>Why uncertainty matters here</h2>
+		<p>In clinical practice, a segmentation that simply outputs a mask is not enough; clinicians need to know <em>where</em> the model is likely to be wrong. That motivated the attempt to separate epistemic uncertainty (what the model does not know) from aleatoric uncertainty (noise in the scan itself). The attempt did not succeed on this small dataset, but the failure mode is instructive (see Model E).</p>
+		
+		<h2>Model variants</h2>
 		<ul>
-			<li><strong>Baseline U-Net:</strong> standard 3D U-Net without attention gating.</li>
-			<li><strong>Attention U-Net:</strong> integrated attention gates to suppress background anatomy.</li>
-			<li><strong>Attention U-Net with data augmentation:</strong> random affine and elastic deformation introduced to mimic normal anatomical variation and scanner artifacts.</li>
-			<li><strong>Attention U-Net with data augmentation and optimisation:</strong> AdamW optimiser and cosine annealing scheduler.</li>
-			<li><strong>Attention U-Net with augmentation consistency:</strong> volumes are variably augmented and passed through the same model for prediction, further enhancing performance.</li>
-			<li><strong>Bayesian Attention U-Net:</strong> upgraded to quantify uncertainty and output aleatoric and epistemic heatmaps.</li>
+			<li><strong>Plain U-Net (benchmark):</strong> an architecturally identical 3D U-Net with standard skip connections instead of attention gates, so that the attention gates&rsquo; contribution could be isolated.</li>
+			<li><strong>Model A &ndash; Attention U-Net:</strong> attention gates on the skip connections to suppress background anatomy.</li>
+			<li><strong>Model B &ndash; with data augmentation:</strong> random affine and elastic deformations to mimic patient positioning and anatomical variation.</li>
+			<li><strong>Model C &ndash; with augmentation and optimisation:</strong> AdamW optimiser with cosine annealing.</li>
+			<li><strong>Model D &ndash; augmentation consistency:</strong> a semi-supervised loss on unlabelled volumes (described below).</li>
+			<li><strong>Model E &ndash; Bayesian Attention U-Net:</strong> Monte Carlo dropout plus a variance head to estimate epistemic and aleatoric uncertainty.</li>
 		</ul>
 
 		<h2>Pre-processing</h2>
@@ -51,7 +51,7 @@
 		</figure>
 
 		<h2>Augmentation consistency model (Model D)</h2>
-		<p>To leverage the abundance of unlabelled image volumes, an augmentation-consistency framework was integrated. The training loop was partitioned into two streams:</p>
+		<p>To make use of 20 additional unlabelled volumes, I added an augmentation-consistency loss. The training loop was partitioned into two streams:</p>
 		<ul>
 			<li><strong>Supervised:</strong> labelled patches were passed through the network without additional augmentation.</li>
 			<li><strong>Unsupervised:</strong> two independent augmentations were applied to the same unlabelled patch. Both augmented views were passed through the current model under gradient isolation; the MSE between the two resulting predictions was computed as the consistency loss and scaled by &lambda; = 0.01 before backpropagation.</li>
@@ -59,9 +59,29 @@
 
 		<h2>Bayesian neural network model (Model E)</h2>
 		<p><strong>Epistemic uncertainty:</strong> a 3D dropout layer (p = 0.5) was introduced at the bottleneck. During inference, Monte Carlo dropout was utilised by keeping the model in training mode and executing 20 forward passes; epistemic uncertainty was calculated as the variance of predictions across these passes.</p>
-		<p><strong>Aleatoric uncertainty:</strong> the network was split into a dual-head decoder after the bottleneck. The prediction head yielded the class probability map, while the variance head output a log-variance map (predicting the logarithm ensures positive variance).</p>
+		<p><strong>Aleatoric uncertainty:</strong> the network was split into a dual-head decoder after the bottleneck. The prediction head yielded the class probability map, while the variance head output a log-variance map (predicting the logarithm ensures positive variance), trained with a loss-attenuation objective following Kendall &amp; Gal (2017).</p>
 
 		<h2>Results</h2>
+		<p>Dice scores on the 3 validation volumes (mean &plusmn; SD). The same volumes were used to select checkpoints, so these figures are optimistic and best read as a comparison between variants rather than as expected performance:</p>
+		<ul>
+			<li>Plain U-Net (benchmark): 0.78 &plusmn; 0.08</li>
+			<li>Model A &ndash; Attention U-Net: 0.82 &plusmn; 0.07</li>
+			<li>Model B &ndash; with augmentation: 0.88 &plusmn; 0.05</li>
+			<li>Model C &ndash; with augmentation and optimisation: 0.89 &plusmn; 0.06</li>
+			<li>Model D &ndash; augmentation consistency: 0.67 &plusmn; 0.03</li>
+			<li>Model E &ndash; Bayesian network: 0.14 &plusmn; 0.03</li>
+		</ul>
+		<p><strong>Ensemble on held-out test volumes.</strong> My Model C was combined with two groupmates&rsquo; models trained on the same split. This required reconstructing volumes from patches, resampling the other models&rsquo; outputs with trilinear interpolation, and correcting an axis-orientation mismatch between our probability maps. On the 3 test volumes, which were not used for any training or selection, the average ensemble reached a Dice of 0.92 &plusmn; 0.01 (0.90, 0.94 and 0.92 per volume). Weighting the models by validation Dice gave a negligible further gain (0.92), as expected because the weights were nearly uniform. Remaining errors sat almost entirely on the organ boundary.</p>
+		<figure>
+			<img src="images/articles/spleen_ensemble.png" alt="Ground truth, ensemble prediction and error maps for the three test volumes" loading="lazy" />
+			<figcaption>Ensemble predictions on the three held-out test volumes. Errors (red = false positive, blue = false negative) are confined to the organ boundary.</figcaption>
+		</figure>
+		
+		<h2>What failed, and why</h2>
+		<p><strong>Augmentation consistency (Model D)</strong> reduced Dice from 0.89 to 0.67. With only 20 unlabelled volumes and a small labelled set, the consistency objective appears to have pulled the model towards predictions that were consistent but not accurate.</p>
+		<p><strong>The Bayesian network (Model E)</strong> collapsed. Its Dice of 0.14 shows it never learned the anatomy; its aleatoric map traced the 48&times;48&times;48 patch boundaries rather than tissue, and its epistemic uncertainty stayed near zero. In other words, the model was confidently wrong, which is the worst combination for a system meant to flag its own unreliability. A safer design would apply Monte Carlo dropout after training to the well-performing Model C, rather than training the uncertainty heads jointly from scratch on so little data.</p>
+		
+		<h2>Figures</h2>
 		<p><strong>Models A, B, and C</strong></p>
 		<figure>
 			<img src="images/articles/modelabc.png" alt="Benchmark results for models A, B, and C" loading="lazy" />
@@ -79,6 +99,7 @@
 		</figure>
 		<figure>
 			<img src="images/articles/vismodele.png" alt="Uncertainty heatmaps produced by the Bayesian model E" loading="lazy" />
+			<figcaption>Model E&rsquo;s uncertainty maps. The aleatoric map follows patch boundaries rather than anatomy, a sign that the model collapsed.</figcaption>
 		</figure>
 
 	</main>
